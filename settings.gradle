@@ -1,0 +1,4 @@
+rootProject.name = 'kafka'
+include 'kafka-consumer-elasticsearch'
+include 'kafka-producer'
+
