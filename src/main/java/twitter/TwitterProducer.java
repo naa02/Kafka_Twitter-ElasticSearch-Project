@@ -23,12 +23,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class TwitterProducer {
+
+    Logger logger = LoggerFactory.getLogger(TwitterProducer.class.getName());
+
     String consumerKey = "dJ8e9p0Aw69Jp34poduDOxS5S";
     String consumerSecret = "8ayvhShdHEUqhsVbWSp8jhaAzWuPTX4Vt9oOMiNIaQMTzM8BXx";
     String token =  "1430841457582043143-D0nSs1wF0SvzhzpZWUu5zWJu0SVehQ";
     String secret = "nwPF4TyktQ8l2Bnvrq7e0B3wKktm3DrmrDDcBbwzc1O9U";
 
-    Logger logger = LoggerFactory.getLogger(TwitterProducer.class.getName());
+    List<String> terms = Lists.newArrayList("bitcoin", "usa", "politics", "sport", "soccer");
 
     public TwitterProducer() {}
 
@@ -65,7 +68,7 @@ public class TwitterProducer {
             }
             if(msg != null){
                 logger.info(msg);
-                producer.send(new ProducerRecord<>("twitter_tweets", null, msg), new Callback() {
+                producer.send(new ProducerRecord<>("twitter_music", null, msg), new Callback() {
                     @Override
                     public void onCompletion(RecordMetadata metadata, Exception exception) {
                         if(exception != null){
@@ -83,8 +86,6 @@ public class TwitterProducer {
         Hosts hosebirdHosts = new HttpHosts(Constants.STREAM_HOST);
         StatusesFilterEndpoint hosebirdEndpoint = new StatusesFilterEndpoint();
         // Optional: set up some followings and track terms
-
-        List<String> terms = Lists.newArrayList("kafka", "mbti");
 
         hosebirdEndpoint.trackTerms(terms);
         // These secrets should be read from a config file
@@ -111,7 +112,16 @@ public class TwitterProducer {
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG ,StringSerializer.class.getName());
 
-        // create producer safe config
+        // create safe Producer
+        properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+        properties.setProperty(ProducerConfig.ACKS_CONFIG, "all");
+        properties.setProperty(ProducerConfig.RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
+        properties.setProperty(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "5");
+
+        // high throughput producer (at the expense of a bit of Latency and CPU usage)
+        properties.setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
+        properties.setProperty(ProducerConfig.LINGER_MS_CONFIG, "20");
+        properties.setProperty(ProducerConfig.BATCH_SIZE_CONFIG, Integer.toString(32*1024)); //32KB batch size
 
         // create the producer
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
